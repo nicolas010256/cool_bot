@@ -1,12 +1,16 @@
+require('dotenv').config();
+
 const Discord = require('discord.js');
 const client = new Discord.Client();
-const auth = require('./auth.json');
+// const auth = require('./auth.json');
 const ytdl = require('ytdl-core');
 const streamOptions = {
     volume: 0.5
 };
 
 let dispatcher;
+
+const token = process.env.BOT_TOKEN;
 
 client.on('ready', () => {
     console.log(`Logged in as ${client.user.tag}!`);
@@ -89,4 +93,4 @@ client.on('message', message => {
     }
 })
 
-client.login(auth.token);
+client.login(token);
