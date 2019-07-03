@@ -2,10 +2,14 @@ require('dotenv').config();
 
 const Discord = require('discord.js');
 const client = new Discord.Client();
-// const auth = require('./auth.json');
 const ytdl = require('ytdl-core');
 const streamOptions = {
     volume: 0.5
+
+};
+const ytdlOptions = {
+    quality: 'highestaudio',
+    format: 'audioonly'
 };
 
 let dispatcher;
@@ -40,7 +44,7 @@ client.on('message', message => {
             if (ytdl.validateURL(content)) {
                 message.member.voiceChannel.join()
                     .then(connection => {
-                        dispatcher = connection.playStream(ytdl(content), streamOptions);
+                        dispatcher = connection.playStream(ytdl(content, ytdlOptions), streamOptions);
                         ytdl.getBasicInfo(content)
                             .then(info => {
                                 message.reply(`Playing ${info.title}`);
