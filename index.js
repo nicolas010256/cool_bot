@@ -8,7 +8,7 @@ const streamOptions = {
 
 };
 const ytdlOptions = {
-    quality: 'highestaudio',
+    quality: 'lowestaudio',
     format: 'audioonly'
 };
 
