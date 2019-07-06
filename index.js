@@ -53,7 +53,7 @@ client.on('message', async message => {
             
                 channel.send(`Playing ${info.title}`);
 
-                const dispatcher = connection.playStream(ytdl(currentSong, ytdlOptions), streamOptions);
+                let dispatcher = connection.playStream(ytdl(currentSong, ytdlOptions), streamOptions);
                 dispatcher.on('end', () => {
                     channel.send(`${info.title} ended!`);
                     currentSong = playlist.pop();
