@@ -5,96 +5,119 @@ const client = new Discord.Client();
 const ytdl = require('ytdl-core');
 const streamOptions = {
     volume: 0.5
-
+    
 };
 const ytdlOptions = {
     quality: 'lowestaudio',
     format: 'audioonly'
 };
 
-let dispatcher;
-
 const token = process.env.BOT_TOKEN;
+
+let currentSong = null;
+let playlist = [];
 
 client.on('ready', () => {
     console.log(`Logged in as ${client.user.tag}!`);
 });
 
-client.on('message', message => {
-    const command = message.content.split(" ")[0];
-    const content = message.content.replace(command, "");
+client.on('message', async message => {
+    const command = message.content.split(' ')[0];
+    const content = message.content.replace(command, '');
+    const channel = message.channel;
+    const voiceChannel = message.member.voiceChannel;
     
     if ('join' === command ) {
-        if (message.member.voiceChannel) {
+        if (voiceChannel) {
             message.member.voiceChannel.join();
-            message.reply(`Joining ${message.member.voiceChannel.name}`);
+            message.reply(`Joining ${voiceChannel.name}`);
         }
     }
-
+    
     if ('leave' === command) {
-        if (message.member.voiceChannel) {
+        if (voiceChannel) {
             message.member.voiceChannel.leave();
-            message.reply(`Leaving ${message.member.voiceChannel.name}`);
+            channel.send(`Leaving ${voiceChannel.name}`)
+        }
+    }
+    
+    if ('play' === command) {
+        if (ytdl.validateURL(content) && voiceChannel) {
+            const connection  = await voiceChannel.join();
+
+            if (currentSong) {
+                playlist = [content, ...playlist];
+            } else {
+                currentSong = content;
+                const info = await ytdl.getBasicInfo(currentSong);
+            
+                channel.send(`Playing ${info.title}`);
+
+                const dispatcher = connection.playStream(ytdl(currentSong, ytdlOptions), streamOptions);
+                dispatcher.on('end', () => {
+                    channel.send(`${info.title} ended!`);
+                    currentSong = playlist.pop();
+                    if (currentSong !== undefined) {
+                        dispatcher = connection.playStream(ytdl(currentSong, ytdlOptions), streamOptions);
+                    } else {
+                        voiceChannel.leave();
+                    }
+                });
+            }
+            
+            return;
+        }
+        
+        if (content === '') {
+            if (currentSong) {
+                const info = await ytdl.getBasicInfo(currentSong);
+                channel.send(`Playing ${info.title}`);
+            } else {
+                channel.send('Playing nothing');
+            }
+
+            return null;
         }
     }
 
-    if ('play' === command) {
-        if (message.member.voiceChannel) {
+    if ('volume' === command) {
+        
+        if (content == null || content === '') {
+            channel.send(`Volume at ${streamOptions.volume * 100}%`);
+            return ;
+        }
 
-            if (ytdl.validateURL(content)) {
-                message.member.voiceChannel.join()
-                    .then(connection => {
-                        dispatcher = connection.playStream(ytdl(content, ytdlOptions), streamOptions);
-                        ytdl.getBasicInfo(content)
-                            .then(info => {
-                                message.reply(`Playing ${info.title}`);
-                            });
-                        dispatcher.on('end', () => {
-                            message.member.voiceChannel.leave();
-                        });
-                    })
-                    .catch(err => {
-                        message.reply(err);
-                    });
+        if (!isNaN(content)) {
+            streamOptions.volume = content;
+            channel.send(`Volume set to ${streamOptions.volume * 100}%`);
+
+            if (voiceChannel) {
+                if (voiceChannel.connection) {
+                    const dispatcher = voiceChannel.connection.dispatcher;
+                    dispatcher.setVolume(streamOptions.volume);
+                }
             }
+            return ;
         }
     }
 
     if ('pause' === command) {
-        if (message.member.voiceChannel) {
-            if (dispatcher) {
-                dispatcher.pause()
+        if (voiceChannel) {
+            if (voiceChannel.connection) {
+                const dispatcher = voiceChannel.connection.dispatcher;
+                dispatcher.pause();
             }
         }
     }
 
     if ('resume' === command) {
-        if (message.member.voiceChannel) {
-            if (dispatcher) {
-                dispatcher.resume();
+        if (voiceChannel) {
+            if (voiceChannel.connection) {
+                const dispatcher = voiceChannel.connection.dispatcher;
+                dispatcher.pause()
             }
         }
     }
-
-    if ('volume' === command) {
-        if ('' === content) {
-            message.reply(`Volume ${streamOptions.volume * 100}%`);
-            return ;
-        }
-
-        if (isNaN(content)) {
-            message.reply('Invalid volume parameter');
-            return ;
-        }
-        if (!isNaN(content)) {
-            streamOptions.volume = content;
-            message.reply(`Volume set to ${streamOptions.volume * 100}%`);
-            if (dispatcher) {
-                dispatcher.setVolume(streamOptions.volume);
-            } 
-            return ;
-        }
-    }
-})
+});
 
 client.login(token); 
